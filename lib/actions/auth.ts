@@ -95,10 +95,13 @@ export async function forgotPasswordAction(
   }
 
   const supabase = await createClient();
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://icredix-crm.vercel.app";
+
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
     {
-      redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify?redirect_to=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000")}/reset-password`,
+      redirectTo: `${appUrl}/reset-password`,
     }
   );
 
