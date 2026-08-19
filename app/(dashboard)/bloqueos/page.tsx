@@ -1,7 +1,10 @@
 import { PageTitle } from "@/components/layout/page-title";
-import { BlocksTable } from "@/components/bloqueos/blocks-table";
-import { UnblocksTable } from "@/components/bloqueos/unblocks-table";
-import { getBlocks, getUnblocks, getUnblockCandidates } from "@/services/blockService";
+import { BloqueosClient } from "@/components/bloqueos/bloqueos-client";
+import {
+  getBlocks,
+  getUnblocks,
+  getUnblockCandidates,
+} from "@/services/blockService";
 import { getClientOptions } from "@/services/clientService";
 import { getPayments } from "@/services/paymentService";
 
@@ -18,11 +21,11 @@ export default async function BloqueosPage() {
     <>
       <PageTitle
         title="Bloqueos"
-        description="Solicitudes de bloqueo y desbloqueo"
+        description="Gestión de solicitudes de bloqueo y desbloqueo de equipos"
       />
       <div className="space-y-6">
-        <BlocksTable blocks={blocks} clients={clients} />
-        <UnblocksTable
+        <BloqueosClient
+          blocks={blocks}
           unblocks={unblocks}
           clients={clients}
           payments={payments}
