@@ -106,9 +106,10 @@ export async function forgotPasswordAction(
   );
 
   if (error) {
+    console.error("[forgotPassword]", error.message);
     return {
       success: false,
-      error: "No se pudo enviar el correo. Verifica el correo ingresado.",
+      error: `No se pudo enviar el correo: ${error.message}`,
     };
   }
 
