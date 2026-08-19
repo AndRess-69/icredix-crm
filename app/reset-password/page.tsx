@@ -29,7 +29,42 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      const hash = window.location.hash;
+      const urlParams = new URLSearchParams(window.location.search);
+
+      const code = urlParams.get("code");
+
+      if (code) {
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
+        if (!exchangeError) {
+          setIsReady(true);
+          window.history.replaceState({}, "", "/reset-password");
+          return;
+        }
+      }
+
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (!sessionError) {
+          setIsReady(true);
+          window.history.replaceState({}, "", "/reset-password");
+          return;
+        }
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (session) {
         setIsReady(true);
       } else {
@@ -37,7 +72,9 @@ export default function ResetPasswordPage() {
           "El enlace ha expirado o no es válido. Solicita uno nuevo."
         );
       }
-    });
+    };
+
+    init();
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
