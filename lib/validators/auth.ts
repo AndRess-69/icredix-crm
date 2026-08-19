@@ -3,7 +3,7 @@ import { z } from "zod";
 export const loginSchema = z.object({
   email: z
     .string()
-    .min(1, "El correo es requerido")
+    .min(1, "El usuario es requerido")
     .email("Ingresa un correo válido"),
   password: z
     .string()
@@ -11,3 +11,12 @@ export const loginSchema = z.object({
 });
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, "El correo es requerido")
+    .email("Ingresa un correo válido"),
+});
+
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;

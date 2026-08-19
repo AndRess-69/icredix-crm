@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { cacheInvalidate, withCache } from "@/lib/cache";
-import { loginSchema, type LoginFormValues } from "@/lib/validators/auth";
+import {
+  loginSchema,
+  forgotPasswordSchema,
+  type LoginFormValues,
+  type ForgotPasswordValues,
+} from "@/lib/validators/auth";
 
 export interface AuthActionResult {
   success: boolean;
@@ -75,4 +80,34 @@ export async function getCurrentProfile() {
 
     return profile;
   });
+}
+
+export async function forgotPasswordAction(
+  values: ForgotPasswordValues
+): Promise<AuthActionResult> {
+  const parsed = forgotPasswordSchema.safeParse(values);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    parsed.data.email,
+    {
+      redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/verify?redirect_to=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000")}/reset-password`,
+    }
+  );
+
+  if (error) {
+    return {
+      success: false,
+      error: "No se pudo enviar el correo. Verifica el correo ingresado.",
+    };
+  }
+
+  return { success: true };
 }
