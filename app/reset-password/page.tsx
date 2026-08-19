@@ -29,38 +29,15 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.substring(1));
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-
-    if (accessToken && refreshToken) {
-      supabase.auth
-        .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(({ error }) => {
-          if (error) {
-            setSessionError("El enlace ha expirado. Solicita uno nuevo.");
-          } else {
-            setIsReady(true);
-          }
-        });
-    } else {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      if (code) {
-        supabase.auth
-          .exchangeCodeForSession(code)
-          .then(({ error }) => {
-            if (error) {
-              setSessionError("El enlace ha expirado. Solicita uno nuevo.");
-            } else {
-              setIsReady(true);
-            }
-          });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsReady(true);
       } else {
-        setSessionError("Enlace inválido. Solicita uno nuevo.");
+        setSessionError(
+          "El enlace ha expirado o no es válido. Solicita uno nuevo."
+        );
       }
-    }
+    });
   }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
