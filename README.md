@@ -15,10 +15,10 @@ Sistema CRM interno para administrar créditos de iPhone. Desarrollado para una 
 | Fase | Estado | Módulos |
 |------|--------|---------|
 | 1 | ✅ Completa | Arquitectura, BD, Auth, Dashboard, Layout |
-| 2 | Pendiente | Clientes, Créditos, Equipos |
-| 3 | Pendiente | Cuotas, Pagos, Mora |
-| 4 | Pendiente | Telegram, Bloqueos, Desbloqueos |
-| 5 | Pendiente | Reportes, Configuración |
+| 2 | ✅ Completa | Clientes, Créditos, Equipos (catálogo de referencias) |
+| 3 | ✅ Completa | Cuotas, Pagos, Mora |
+| 4 | ✅ Completa | Telegram, Bloqueos, Desbloqueos |
+| 5 | ✅ Completa | Reportes, Configuración |
 
 ## Configuración local
 
@@ -39,9 +39,10 @@ cp .env.example .env.local
 ### 3. Supabase
 
 1. Crea un proyecto en [supabase.com](https://supabase.com)
-2. Ejecuta el SQL de `supabase/migrations/001_initial_schema.sql` en el SQL Editor
-3. Crea un usuario en **Authentication → Users**
-4. Copia la URL y las keys anon/service a `.env.local`
+2. Ejecuta las migraciones en orden desde `supabase/migrations/` en el SQL Editor
+3. O usa `supabase db pull` para generar el esquema consolidado desde producción
+4. Crea un usuario en **Authentication → Users**
+5. Copia la URL y las keys anon/service a `.env.local`
 
 ### 4. Ejecutar
 
