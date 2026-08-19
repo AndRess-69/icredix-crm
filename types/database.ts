@@ -1061,6 +1061,24 @@ export interface Database {
         };
         Returns: undefined;
       };
+      get_dashboard_stats: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_payments_by_method: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_credit_status_summary: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      get_monthly_payments_chart: {
+        Args: {
+          months_back?: number;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       user_role: UserRole;
