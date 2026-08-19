@@ -41,7 +41,6 @@ export interface UnifiedRequest {
   imei: string;
   phone_line: string | null;
   reason: string;
-  diagnoses: string | null;
   payment_amount: number | null;
   payment_date: string | null;
   status: BlockStatus;
@@ -66,7 +65,6 @@ function normalizeRequests(
       imei: b.imei,
       phone_line: b.phone_line ?? null,
       reason: b.reason,
-      diagnoses: b.diagnoses ?? null,
       payment_amount: null,
       payment_date: null,
       status: b.status,
@@ -86,7 +84,6 @@ function normalizeRequests(
       imei: u.imei,
       phone_line: u.phone_line ?? null,
       reason: u.unblock_reason ?? "—",
-      diagnoses: u.diagnoses ?? null,
       payment_amount: u.payment?.amount ?? null,
       payment_date: u.payment?.created_at ?? null,
       status: u.status,
@@ -281,18 +278,6 @@ export function BlockUnifiedTable({
               {row.original.reason}
             </span>
           ),
-        },
-        {
-          accessorKey: "diagnoses",
-          header: "Diagnósticos",
-          cell: ({ row }) =>
-            row.original.diagnoses ? (
-              <span className="line-clamp-2 max-w-48">
-                {row.original.diagnoses}
-              </span>
-            ) : (
-              "—"
-            ),
         },
         {
           id: "payment",
