@@ -85,33 +85,41 @@ export async function getCurrentProfile() {
 export async function forgotPasswordAction(
   values: ForgotPasswordValues
 ): Promise<AuthActionResult> {
-  const parsed = forgotPasswordSchema.safeParse(values);
+  try {
+    const parsed = forgotPasswordSchema.safeParse(values);
 
-  if (!parsed.success) {
-    return {
-      success: false,
-      error: parsed.error.issues[0]?.message ?? "Datos inválidos",
-    };
-  }
-
-  const supabase = await createClient();
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://icredix-crm.vercel.app";
-
-  const { error } = await supabase.auth.resetPasswordForEmail(
-    parsed.data.email,
-    {
-      redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
+    if (!parsed.success) {
+      return {
+        success: false,
+        error: parsed.error.issues[0]?.message ?? "Datos inválidos",
+      };
     }
-  );
 
-  if (error) {
-    console.error("[forgotPassword]", error.message);
+    const supabase = await createClient();
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ?? "https://icredix-crm.vercel.app";
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      parsed.data.email,
+      {
+        redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
+      }
+    );
+
+    if (error) {
+      console.error("[forgotPassword]", error.message);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    return { success: true };
+  } catch (e) {
+    console.error("[forgotPassword] exception", e);
     return {
       success: false,
-      error: `No se pudo enviar el correo: ${error.message}`,
+      error: "Error inesperado al enviar el correo.",
     };
   }
-
-  return { success: true };
 }
