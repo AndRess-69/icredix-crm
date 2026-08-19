@@ -75,7 +75,6 @@ export function UnblockFormDialog({
       payment_id: "",
       unblock_reason: "",
       phone_line: "",
-      diagnoses: "",
       credit_id: prefill?.credit_id ?? "",
       device_id: prefill?.device_id ?? "",
     },
@@ -89,7 +88,6 @@ export function UnblockFormDialog({
         payment_id: "",
         unblock_reason: "",
         phone_line: "",
-        diagnoses: "",
         credit_id: prefill?.credit_id ?? "",
         device_id: prefill?.device_id ?? "",
       });
@@ -234,19 +232,6 @@ export function UnblockFormDialog({
             />
             {errors.phone_line && (
               <p className="text-xs text-destructive">{errors.phone_line.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="diagnoses">Diagnósticos del equipo</Label>
-            <Textarea
-              id="diagnoses"
-              placeholder="Diagnósticos que se registran en la BD del proveedor al desbloquear"
-              {...register("diagnoses")}
-              aria-invalid={!!errors.diagnoses}
-            />
-            {errors.diagnoses && (
-              <p className="text-xs text-destructive">{errors.diagnoses.message}</p>
             )}
           </div>
 

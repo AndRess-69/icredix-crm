@@ -53,12 +53,12 @@ export function BlockFormDialog({
     formState: { errors },
   } = useForm<BlockFormValues>({
     resolver: zodResolver(blockFormSchema),
-    defaultValues: { client_id: "", imei: "", reason: "", phone_line: "", diagnoses: "", credit_id: "" },
+    defaultValues: { client_id: "", imei: "", reason: "", phone_line: "", credit_id: "" },
   });
 
   React.useEffect(() => {
     if (open) {
-      reset({ client_id: "", imei: "", reason: "", phone_line: "", diagnoses: "", credit_id: "" });
+      reset({ client_id: "", imei: "", reason: "", phone_line: "", credit_id: "" });
     }
   }, [open, reset]);
 
@@ -191,19 +191,6 @@ export function BlockFormDialog({
             />
             {errors.phone_line && (
               <p className="text-xs text-destructive">{errors.phone_line.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="diagnoses">Diagnósticos</Label>
-            <Textarea
-              id="diagnoses"
-              placeholder="Diagnósticos del equipo / información para el proveedor"
-              {...register("diagnoses")}
-              aria-invalid={!!errors.diagnoses}
-            />
-            {errors.diagnoses && (
-              <p className="text-xs text-destructive">{errors.diagnoses.message}</p>
             )}
           </div>
 
