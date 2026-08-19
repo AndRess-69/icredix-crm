@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, Plus, Smartphone } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { BadgeCheck, ChevronDown, ChevronRight, Pencil, Plus, RotateCcw, Smartphone, XCircle } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +21,13 @@ import { CreditImeiForm } from "@/components/clientes/expediente/credit-imei-for
 import { CreditPaymentDialog } from "@/components/clientes/expediente/credit-payment-dialog";
 import { CreditDeviceForm } from "@/components/clientes/expediente/credit-device-form";
 import { CreditFormDialog } from "@/components/creditos/credit-form-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ApproveCreditDialog } from "@/components/clientes/expediente/approve-credit-dialog";
+import {
+  approveCreditAction,
+  denyCreditAction,
+  markInProgressCreditAction,
+} from "@/lib/actions/credits";
 import {
   getCreditStatusInfo,
   getDeviceStatusInfo,
@@ -28,6 +37,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils/format";
 import type {
   ClientExpediente,
+  CreditWithRelations,
   DeviceReferenceOption,
   ExpedienteCredit,
 } from "@/types";
@@ -43,11 +53,16 @@ export function ExpedienteCreditos({
   deviceReferences,
   interestRate,
 }: ExpedienteCreditosProps) {
+  const router = useRouter();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [imeiCredit, setImeiCredit] = React.useState<ClientExpediente["credits"][number] | null>(null);
   const [creditDialogOpen, setCreditDialogOpen] = React.useState(false);
   const [paymentCredit, setPaymentCredit] = React.useState<ExpedienteCredit | null>(null);
   const [deviceCredit, setDeviceCredit] = React.useState<ExpedienteCredit | null>(null);
+  const [editingCredit, setEditingCredit] = React.useState<ExpedienteCredit | null>(null);
+  const [approvingCredit, setApprovingCredit] = React.useState<ExpedienteCredit | null>(null);
+  const [denyingCredit, setDenyingCredit] = React.useState<ExpedienteCredit | null>(null);
+  const [markingInProgressCredit, setMarkingInProgressCredit] = React.useState<ExpedienteCredit | null>(null);
 
   const clientOption = React.useMemo(
     () => ({
@@ -73,6 +88,42 @@ export function ExpedienteCreditos({
     }
     return map;
   }, [expediente.payments]);
+
+  const handleApprove = async (approvalDate?: string) => {
+    if (!approvingCredit) return;
+    const result = await approveCreditAction(approvingCredit.id, approvalDate);
+    if (result.success) {
+      toast.success("Crédito aprobado");
+      setApprovingCredit(null);
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Error al aprobar el crédito");
+    }
+  };
+
+  const handleDeny = async () => {
+    if (!denyingCredit) return;
+    const result = await denyCreditAction(denyingCredit.id);
+    if (result.success) {
+      toast.success("Crédito negado");
+      setDenyingCredit(null);
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Error al negar el crédito");
+    }
+  };
+
+  const handleMarkInProgress = async () => {
+    if (!markingInProgressCredit) return;
+    const result = await markInProgressCreditAction(markingInProgressCredit.id);
+    if (result.success) {
+      toast.success("Crédito marcado como en proceso");
+      setMarkingInProgressCredit(null);
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Error al cambiar estado del crédito");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -132,6 +183,27 @@ export function ExpedienteCreditos({
                       </p>
                     </div>
                   <div className="flex items-center gap-2">
+                    {credit.status === "en_proceso" && (
+                      <>
+                        <Button size="sm" onClick={() => setApprovingCredit(credit)}>
+                          <BadgeCheck className="size-3.5" />
+                          Aprobar
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setDenyingCredit(credit)}>
+                          <XCircle className="size-3.5" />
+                          Negar
+                        </Button>
+                      </>
+                    )}
+                    {(credit.status === "negado" || credit.status === "activo") && (
+                      <Button size="sm" variant="outline" onClick={() => setMarkingInProgressCredit(credit)}>
+                        <RotateCcw className="size-3.5" />
+                        En proceso
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingCredit(credit); setCreditDialogOpen(true); }}>
+                      <Pencil className="size-3.5" />
+                    </Button>
                     {!credit.device_reference && (
                       <Button size="sm" variant="outline" onClick={() => setDeviceCredit(credit)}>
                         Asociar referencia
@@ -181,6 +253,18 @@ export function ExpedienteCreditos({
                       <div>
                         <p className="text-muted-foreground">Fecha de inicio</p>
                         <p className="font-medium">{formatDate(credit.start_date)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Fecha solicitud</p>
+                        <p className="font-medium">{formatDate(credit.created_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Fecha de aprobación</p>
+                        {credit.approval_date ? (
+                          <p className="font-medium text-emerald-600">{formatDate(credit.approval_date)}</p>
+                        ) : (
+                          <p className="font-medium text-amber-600">Sin aprobar</p>
+                        )}
                       </div>
                       <div>
                         <p className="text-muted-foreground">Próximo vencimiento</p>
@@ -349,11 +433,15 @@ export function ExpedienteCreditos({
 
       <CreditFormDialog
         open={creditDialogOpen}
-        onOpenChange={setCreditDialogOpen}
+        onOpenChange={(open) => {
+          setCreditDialogOpen(open);
+          if (!open) setEditingCredit(null);
+        }}
         clients={[clientOption]}
         deviceReferences={deviceReferences}
         interestRate={interestRate}
         client={clientOption}
+        credit={editingCredit as unknown as CreditWithRelations | null}
       />
 
       <CreditDeviceForm
@@ -372,6 +460,37 @@ export function ExpedienteCreditos({
         onOpenChange={(open) => {
           if (!open) setPaymentCredit(null);
         }}
+      />
+
+      <ApproveCreditDialog
+        credit={approvingCredit}
+        open={!!approvingCredit}
+        onOpenChange={(open) => {
+          if (!open) setApprovingCredit(null);
+        }}
+        onConfirm={handleApprove}
+      />
+
+      <ConfirmDialog
+        open={!!denyingCredit}
+        onOpenChange={(open) => {
+          if (!open) setDenyingCredit(null);
+        }}
+        title="Negar crédito"
+        description={`¿Confirmas que deseas negar el crédito ${denyingCredit?.credit_number ?? ""}? El estado cambiará a "Negado".`}
+        confirmLabel="Negar"
+        onConfirm={handleDeny}
+      />
+
+      <ConfirmDialog
+        open={!!markingInProgressCredit}
+        onOpenChange={(open) => {
+          if (!open) setMarkingInProgressCredit(null);
+        }}
+        title="Marcar en proceso"
+        description={`¿Confirmas que deseas volver a "En proceso" el crédito ${markingInProgressCredit?.credit_number ?? ""}?`}
+        confirmLabel="Confirmar"
+        onConfirm={handleMarkInProgress}
       />
     </div>
   );

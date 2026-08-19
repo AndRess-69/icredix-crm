@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { LegacyColumnDef } from "@tanstack/react-table/legacy";
-import { BadgeCheck, Camera, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { BadgeCheck, Camera, Eye, Pencil, Plus, Trash2, XCircle, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -15,6 +15,8 @@ import { ViewInstallmentsDialog } from "@/components/creditos/view-installments-
 import { CreditDocumentsDialog } from "@/components/creditos/credit-documents-dialog";
 import {
   approveCreditAction,
+  denyCreditAction,
+  markInProgressCreditAction,
   deleteCreditAction,
 } from "@/lib/actions/credits";
 import { getCreditStatusInfo } from "@/lib/utils/status";
@@ -44,6 +46,11 @@ export function CreditsTable({
   const [approving, setApproving] = React.useState<CreditWithRelations | null>(
     null
   );
+  const [denying, setDenying] = React.useState<CreditWithRelations | null>(
+    null
+  );
+  const [markingInProgress, setMarkingInProgress] =
+    React.useState<CreditWithRelations | null>(null);
 
   const handleDelete = async () => {
     if (!deleting) return;
@@ -64,6 +71,28 @@ export function CreditsTable({
       router.refresh();
     } else {
       toast.error(result.error ?? "Error al aprobar el crédito");
+    }
+  };
+
+  const handleDeny = async () => {
+    if (!denying) return;
+    const result = await denyCreditAction(denying.id);
+    if (result.success) {
+      toast.success("Crédito negado");
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Error al negar el crédito");
+    }
+  };
+
+  const handleMarkInProgress = async () => {
+    if (!markingInProgress) return;
+    const result = await markInProgressCreditAction(markingInProgress.id);
+    if (result.success) {
+      toast.success("Crédito marcado como en proceso");
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Error al cambiar estado del crédito");
     }
   };
 
@@ -161,17 +190,42 @@ export function CreditsTable({
       {
         id: "actions",
         header: "",
-        cell: ({ row }) => (
+        cell: ({ row }) => {
+          const st = row.original.status;
+          return (
           <div className="flex items-center justify-end gap-1">
-            {!row.original.approval_date && (
+            {st === "en_proceso" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setApproving(row.original)}
+                  aria-label="Aprobar crédito"
+                >
+                  <BadgeCheck className="size-3.5" />
+                  Aprobar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setDenying(row.original)}
+                  aria-label="Negar crédito"
+                >
+                  <XCircle className="size-3.5" />
+                  Negar
+                </Button>
+              </>
+            )}
+            {(st === "negado" || st === "activo") && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setApproving(row.original)}
-                aria-label="Aprobar crédito"
+                onClick={() => setMarkingInProgress(row.original)}
+                aria-label="Marcar en proceso"
               >
-                <BadgeCheck className="size-3.5" />
-                Aprobar
+                <RotateCcw className="size-3.5" />
+                En proceso
               </Button>
             )}
             <Button
@@ -211,7 +265,8 @@ export function CreditsTable({
               <Trash2 className="size-3.5" />
             </Button>
           </div>
-        ),
+          );
+        },
       },
     ],
     []
@@ -273,9 +328,31 @@ export function CreditsTable({
           if (!open) setApproving(null);
         }}
         title="Aprobar crédito"
-        description={`¿Confirmas la aprobación del crédito ${approving?.credit_number ?? ""}? Se registrará la fecha y se enviará la notificación por Telegram.`}
+        description={`¿Confirmas la aprobación del crédito ${approving?.credit_number ?? ""}? Se cambiará a "Activo", se actualizará la fecha de inicio y se regenerarán las cuotas.`}
         confirmLabel="Aprobar"
         onConfirm={handleApprove}
+      />
+
+      <ConfirmDialog
+        open={!!denying}
+        onOpenChange={(open) => {
+          if (!open) setDenying(null);
+        }}
+        title="Negar crédito"
+        description={`¿Confirmas que deseas negar el crédito ${denying?.credit_number ?? ""}? El estado cambiará a "Negado".`}
+        confirmLabel="Negar"
+        onConfirm={handleDeny}
+      />
+
+      <ConfirmDialog
+        open={!!markingInProgress}
+        onOpenChange={(open) => {
+          if (!open) setMarkingInProgress(null);
+        }}
+        title="Marcar en proceso"
+        description={`¿Confirmas que deseas volver a "En proceso" el crédito ${markingInProgress?.credit_number ?? ""}?`}
+        confirmLabel="Confirmar"
+        onConfirm={handleMarkInProgress}
       />
 
       <ConfirmDialog

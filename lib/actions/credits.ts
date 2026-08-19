@@ -155,6 +155,14 @@ export async function updateCreditAction(
 
   if (error) return { success: false, error: error.message };
 
+  if (data.approval_date && data.approval_date.trim() !== "") {
+    const { error: approvalError } = await supabase.rpc("update_approval_date", {
+      p_credit_id: id,
+      p_approval_date: data.approval_date,
+    });
+    if (approvalError) return { success: false, error: approvalError.message };
+  }
+
   cacheInvalidate("svc");
   revalidatePath("/creditos");
   return { success: true };
@@ -181,20 +189,26 @@ export async function deleteCreditAction(id: string): Promise<ActionResult> {
 }
 
 /**
- * Aprueba un crédito: registra la fecha de aprobación y notifica por
- * Telegram (cliente, cédula, referencia, IMEI y primer fecha de pago).
+ * Aprueba un crédito: cambia estado a 'activo', setea approval_date,
+ * actualiza start_date y regenera cuotas desde esa fecha.
+ * Notifica por Telegram y sincroniza a Google Sheets.
  */
-export async function approveCreditAction(id: string): Promise<ActionResult> {
+export async function approveCreditAction(
+  id: string,
+  approvalDate?: string
+): Promise<ActionResult> {
   const supabase = await createClient();
 
   if (!(await requireUser())) {
     return { success: false, error: "No autorizado" };
   }
 
+  const dateStr = approvalDate || new Date().toISOString().slice(0, 10);
+
   const { data: credit, error: fetchError } = await supabase
     .from("credits")
     .select(
-      "credit_number, imei, approval_date, client:clients(first_name, last_name, cedula)"
+      "credit_number, imei, status, client:clients(first_name, last_name, cedula)"
     )
     .eq("id", id)
     .single();
@@ -203,17 +217,16 @@ export async function approveCreditAction(id: string): Promise<ActionResult> {
     return { success: false, error: "Crédito no encontrado" };
   }
 
-  if (credit.approval_date) {
-    return { success: false, error: "El crédito ya fue aprobado" };
+  if (credit.status !== "en_proceso") {
+    return { success: false, error: "Solo se pueden aprobar créditos en proceso" };
   }
 
-  const { error: updateError } = await supabase
-    .from("credits")
-    .update({ approval_date: new Date().toISOString() })
-    .eq("id", id)
-    .is("approval_date", null);
+  const { error: rpcError } = await supabase.rpc("approve_credit", {
+    p_credit_id: id,
+    p_approval_date: dateStr,
+  });
 
-  if (updateError) return { success: false, error: updateError.message };
+  if (rpcError) return { success: false, error: rpcError.message };
 
   const { data: firstInstallment } = await supabase
     .from("installments")
@@ -232,10 +245,56 @@ export async function approveCreditAction(id: string): Promise<ActionResult> {
     : "—";
 
   await sendTelegramMessage(
-    `✅ <b>Crédito aprobado</b>\n👤 Cliente: ${escapeHtml(clientName)}\n🆔 CC: ${escapeHtml(cedula)}\n🧾 Referencia: ${escapeHtml(credit.credit_number)}\n📱 IMEI: ${escapeHtml(credit.imei)}\n📅 Primer pago: ${escapeHtml(firstDue)}`
+    `✅ <b>Crédito aprobado</b>\n👤 Cliente: ${escapeHtml(clientName)}\n🆔 CC: ${escapeHtml(cedula)}\n🧾 Referencia: ${escapeHtml(credit.credit_number)}\n📱 IMEI: ${escapeHtml(credit.imei)}\n📅 Aprobado: ${escapeHtml(dateStr)}\n📅 Primer pago: ${escapeHtml(firstDue)}`
   );
 
   await syncApprovedCreditToSheet(id);
+
+  cacheInvalidate("svc");
+  revalidatePath("/creditos");
+  return { success: true };
+}
+
+/**
+ * Niega un crédito: cambia estado a 'negado'.
+ */
+export async function denyCreditAction(id: string): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  if (!(await requireUser())) {
+    return { success: false, error: "No autorizado" };
+  }
+
+  const { error } = await supabase.rpc("change_credit_status", {
+    p_credit_id: id,
+    p_new_status: "negado",
+  });
+
+  if (error) return { success: false, error: error.message };
+
+  cacheInvalidate("svc");
+  revalidatePath("/creditos");
+  return { success: true };
+}
+
+/**
+ * Marca un crédito como "en proceso".
+ */
+export async function markInProgressCreditAction(
+  id: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  if (!(await requireUser())) {
+    return { success: false, error: "No autorizado" };
+  }
+
+  const { error } = await supabase.rpc("change_credit_status", {
+    p_credit_id: id,
+    p_new_status: "en_proceso",
+  });
+
+  if (error) return { success: false, error: error.message };
 
   cacheInvalidate("svc");
   revalidatePath("/creditos");

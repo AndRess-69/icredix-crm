@@ -29,6 +29,12 @@ export const creditFormSchema = z
       .string()
       .trim()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
+    approval_date: z
+      .string()
+      .trim()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida")
+      .optional()
+      .or(z.literal("")),
   })
   .refine((data) => data.device_value > data.initial_payment, {
     message: "La cuota inicial no puede ser mayor o igual al valor del equipo",

@@ -70,6 +70,7 @@ function toFormValues(credit: CreditWithRelations): CreditFormValues {
     initial_payment: credit.initial_payment,
     installments_count: credit.installments_count,
     start_date: credit.start_date,
+    approval_date: credit.approval_date ?? "",
   };
 }
 
@@ -313,6 +314,19 @@ export function CreditFormDialog({
                 <p className="text-xs text-destructive">{errors.start_date.message}</p>
               )}
             </div>
+
+            {credit && (
+              <div className="space-y-2">
+                <Label htmlFor="approval_date">Fecha de aprobación</Label>
+                <Input id="approval_date" type="date" {...register("approval_date")} />
+                <p className="text-xs text-muted-foreground">
+                  Define cuándo se aprobó el crédito. La fecha de inicio se actualizará automáticamente.
+                </p>
+                {errors.approval_date && (
+                  <p className="text-xs text-destructive">{errors.approval_date.message}</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="device_value">Valor del equipo (COP)</Label>

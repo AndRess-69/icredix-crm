@@ -1061,6 +1061,27 @@ export interface Database {
         };
         Returns: undefined;
       };
+      approve_credit: {
+        Args: {
+          p_credit_id: string;
+          p_approval_date?: string;
+        };
+        Returns: undefined;
+      };
+      change_credit_status: {
+        Args: {
+          p_credit_id: string;
+          p_new_status: CreditStatus;
+        };
+        Returns: undefined;
+      };
+      update_approval_date: {
+        Args: {
+          p_credit_id: string;
+          p_approval_date: string;
+        };
+        Returns: undefined;
+      };
       get_dashboard_stats: {
         Args: Record<string, never>;
         Returns: Json;

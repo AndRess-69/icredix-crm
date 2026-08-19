@@ -16,7 +16,9 @@ import {
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "ghost" | "link" | "success" | "warning" | "info";
 
 const creditStatusLabels: Record<CreditStatus, string> = {
+  en_proceso: "En proceso",
   activo: "Activo",
+  negado: "Negado",
   finalizado: "Finalizado",
   en_mora: "En mora",
   bloqueado: "Bloqueado",
@@ -24,7 +26,9 @@ const creditStatusLabels: Record<CreditStatus, string> = {
 };
 
 const creditStatusVariants: Record<CreditStatus, BadgeVariant> = {
+  en_proceso: "warning",
   activo: "info",
+  negado: "destructive",
   finalizado: "success",
   en_mora: "destructive",
   bloqueado: "destructive",

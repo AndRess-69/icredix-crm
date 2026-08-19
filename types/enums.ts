@@ -22,7 +22,9 @@ export const CLIENT_VALIDATION_STATUSES = [
 export type ClientValidationStatus = (typeof CLIENT_VALIDATION_STATUSES)[number];
 
 export const CREDIT_STATUSES = [
+  "en_proceso",
   "activo",
+  "negado",
   "finalizado",
   "en_mora",
   "bloqueado",
