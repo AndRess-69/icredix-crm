@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    console.error("[auth/callback] exchange error:", error.message, error.code);
     return NextResponse.redirect(
       `${origin}/reset-password?error=exchange_failed`
     );
