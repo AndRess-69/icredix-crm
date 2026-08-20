@@ -78,10 +78,10 @@ export function CreditsTable({
     if (!denying) return;
     const result = await denyCreditAction(denying.id);
     if (result.success) {
-      toast.success("Crédito negado");
+      toast.success("Crédito rechazado");
       router.refresh();
     } else {
-      toast.error(result.error ?? "Error al negar el crédito");
+      toast.error(result.error ?? "Error al rechazar el crédito");
     }
   };
 
@@ -210,10 +210,10 @@ export function CreditsTable({
                   size="sm"
                   className="text-destructive hover:text-destructive"
                   onClick={() => setDenying(row.original)}
-                  aria-label="Negar crédito"
+                  aria-label="Rechazar crédito"
                 >
                   <XCircle className="size-3.5" />
-                  Negar
+                  Rechazar
                 </Button>
               </>
             )}
@@ -330,6 +330,7 @@ export function CreditsTable({
         title="Aprobar crédito"
         description={`¿Confirmas la aprobación del crédito ${approving?.credit_number ?? ""}? Se cambiará a "Activo", se actualizará la fecha de inicio y se regenerarán las cuotas.`}
         confirmLabel="Aprobar"
+        destructive={false}
         onConfirm={handleApprove}
       />
 
@@ -338,9 +339,10 @@ export function CreditsTable({
         onOpenChange={(open) => {
           if (!open) setDenying(null);
         }}
-        title="Negar crédito"
-        description={`¿Confirmas que deseas negar el crédito ${denying?.credit_number ?? ""}? El estado cambiará a "Negado".`}
-        confirmLabel="Negar"
+        title="Rechazar crédito"
+        description={`¿Confirmas que deseas rechazar el crédito ${denying?.credit_number ?? ""}? El estado cambiará a "Negado".`}
+        confirmLabel="Rechazar"
+        destructive
         onConfirm={handleDeny}
       />
 
@@ -352,6 +354,7 @@ export function CreditsTable({
         title="Marcar en proceso"
         description={`¿Confirmas que deseas volver a "En proceso" el crédito ${markingInProgress?.credit_number ?? ""}?`}
         confirmLabel="Confirmar"
+        destructive={false}
         onConfirm={handleMarkInProgress}
       />
 

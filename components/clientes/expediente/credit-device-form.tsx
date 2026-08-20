@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,7 +23,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { assignDeviceReferenceToCreditAction } from "@/lib/actions/credits";
+import {
+  assignDeviceReferenceToCreditAction,
+  registerCreditImeiAction,
+} from "@/lib/actions/credits";
 import type { DeviceReferenceOption, ExpedienteCredit } from "@/types";
 
 interface CreditDeviceFormProps {
@@ -40,30 +44,53 @@ export function CreditDeviceForm({
 }: CreditDeviceFormProps) {
   const router = useRouter();
   const [referenceId, setReferenceId] = React.useState("");
+  const [imei, setImei] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) setReferenceId("");
-  }, [open]);
+    if (open) {
+      setReferenceId(credit?.device_reference?.id ?? "");
+      setImei(credit?.imei ?? "");
+    }
+  }, [open, credit]);
 
   const selectedReference =
     deviceReferences.find((ref) => ref.id === referenceId) ?? null;
 
   const handleSubmit = async () => {
-    if (!credit || !referenceId) return;
+    if (!credit) return;
+    if (!referenceId) {
+      toast.error("Selecciona una referencia del equipo");
+      return;
+    }
+    if (imei && !/^\d{15}$/.test(imei)) {
+      toast.error("El IMEI debe tener exactamente 15 dígitos");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const result = await assignDeviceReferenceToCreditAction(
+      const refResult = await assignDeviceReferenceToCreditAction(
         credit.id,
         referenceId
       );
-      if (result.success) {
-        toast.success("Referencia asociada al crédito");
-        onOpenChange(false);
-        router.refresh();
-      } else {
-        toast.error(result.error ?? "Error al asociar la referencia");
+      if (!refResult.success) {
+        toast.error(refResult.error ?? "Error al asociar la referencia");
+        return;
       }
+
+      const currentImei = credit.imei ?? "";
+      if (imei !== currentImei && imei.trim() !== "") {
+        const imeiResult = await registerCreditImeiAction(credit.id, imei);
+        if (!imeiResult.success) {
+          toast.error(imeiResult.error ?? "Error al registrar el IMEI");
+          return;
+        }
+      }
+
+      toast.success("Referencia e IMEI actualizados");
+      onOpenChange(false);
+      router.refresh();
     } finally {
       setIsSubmitting(false);
     }
@@ -73,10 +100,10 @@ export function CreditDeviceForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Asociar referencia de equipo</DialogTitle>
+          <DialogTitle>Asignar referencia / IMEI</DialogTitle>
           <DialogDescription>
             {credit
-              ? `Crédito ${credit.credit_number}. Selecciona la referencia del equipo del catálogo.`
+              ? `Crédito ${credit.credit_number}. Selecciona la referencia del equipo y opcionalmente ingresa el IMEI.`
               : " "}
           </DialogDescription>
         </DialogHeader>
@@ -131,6 +158,21 @@ export function CreditDeviceForm({
               </div>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="device-imei">IMEI (opcional)</Label>
+            <Input
+              id="device-imei"
+              placeholder="15 dígitos"
+              maxLength={15}
+              inputMode="numeric"
+              value={imei}
+              onChange={(e) => setImei(e.target.value.replace(/\D/g, ""))}
+            />
+            <p className="text-xs text-muted-foreground">
+              Se registra cuando el equipo sea comprado/recibido.
+            </p>
+          </div>
         </div>
 
         <DialogFooter>
@@ -147,7 +189,7 @@ export function CreditDeviceForm({
             disabled={!referenceId || isSubmitting}
           >
             {isSubmitting && <Loader2 className="size-4 animate-spin" />}
-            Asociar referencia
+            Guardar
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -7,97 +7,159 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DeviceLifecycleForm } from "@/components/clientes/expediente/device-lifecycle-form";
-import { getDeviceStatusInfo } from "@/lib/utils/status";
-import { formatDate } from "@/lib/utils/format";
-import type { ClientExpediente, Device } from "@/types";
+import { CreditDeviceForm } from "@/components/clientes/expediente/credit-device-form";
+import {
+  getCreditStatusInfo,
+  getDeviceStatusInfo,
+} from "@/lib/utils/status";
+import type { ClientExpediente, Device, DeviceReferenceOption, ExpedienteCredit } from "@/types";
 
 interface ExpedienteEquiposProps {
   expediente: ClientExpediente;
+  deviceReferences: DeviceReferenceOption[];
 }
 
-export function ExpedienteEquipos({ expediente }: ExpedienteEquiposProps) {
-  const [selectedDevice, setSelectedDevice] = React.useState<Device | null>(null);
+type CreditEquipmentEntry = {
+  credit: ExpedienteCredit;
+  device: Device | null;
+  deviceReference: { brand: string; model: string; capacity: string | null; color: string | null } | null;
+  imei: string | null;
+};
 
-  const devices = React.useMemo(() => {
-    const seen = new Set<string>();
-    const list: Array<{ device: Device; credits: string[] }> = [];
+export function ExpedienteEquipos({ expediente, deviceReferences }: ExpedienteEquiposProps) {
+  const [selectedDevice, setSelectedDevice] = React.useState<Device | null>(null);
+  const [editingCredit, setEditingCredit] = React.useState<ExpedienteCredit | null>(null);
+
+  const equipmentEntries = React.useMemo<CreditEquipmentEntry[]>(() => {
+    const list: CreditEquipmentEntry[] = [];
     for (const credit of expediente.credits) {
-      const device = credit.device;
-      if (!device) continue;
-      const existing = list.find((entry) => entry.device.id === device.id);
-      if (existing) {
-        existing.credits.push(credit.credit_number);
-      } else {
-        seen.add(device.id);
-        list.push({ device, credits: [credit.credit_number] });
+      const hasRef = !!credit.device_reference;
+      const hasImei = !!credit.imei;
+      const hasDevice = !!credit.device;
+      if (hasRef || hasImei || hasDevice) {
+        list.push({
+          credit,
+          device: credit.device ?? null,
+          deviceReference: credit.device_reference ?? null,
+          imei: credit.imei ?? null,
+        });
       }
     }
     return list;
   }, [expediente.credits]);
 
-  if (devices.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        El cliente no tiene equipos asociados a sus créditos.
-      </p>
+  const creditsWithoutEquipment = React.useMemo(() => {
+    return expediente.credits.filter(
+      (c) => !c.device_reference && !c.imei && !c.device
     );
-  }
+  }, [expediente.credits]);
 
   return (
     <div className="space-y-4">
-      {devices.map(({ device, credits }) => {
-        const info = getDeviceStatusInfo(device.status);
+      {equipmentEntries.length === 0 && creditsWithoutEquipment.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          El cliente aún no tiene créditos registrados.
+        </p>
+      )}
+
+      {equipmentEntries.map(({ credit, device, deviceReference, imei }) => {
+        const creditInfo = getCreditStatusInfo(credit.status);
+        const deviceInfo = device ? getDeviceStatusInfo(device.status) : null;
         return (
-          <Card key={device.id}>
+          <Card key={credit.id}>
             <CardContent className="p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
                   <Smartphone className="mt-0.5 size-5 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className="font-medium">
-                      {device.brand} {device.model}
-                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {[device.capacity, device.color].filter(Boolean).join(" · ") ||
-                        "Sin especificar"}
+                      {credit.credit_number}
                     </p>
+                    {deviceReference ? (
+                      <p className="font-medium">
+                        {deviceReference.brand} {deviceReference.model}
+                        {[deviceReference.capacity, deviceReference.color]
+                          .filter(Boolean).length > 0
+                          ? ` · ${[deviceReference.capacity, deviceReference.color].filter(Boolean).join(" · ")}`
+                          : ""}
+                      </p>
+                    ) : device ? (
+                      <p className="font-medium">
+                        {device.brand} {device.model}
+                        {[device.capacity, device.color]
+                          .filter(Boolean).length > 0
+                          ? ` · ${[device.capacity, device.color].filter(Boolean).join(" · ")}`
+                          : ""}
+                      </p>
+                    ) : (
+                      <p className="font-medium text-muted-foreground">
+                        Sin referencia
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-muted-foreground">
-                      IMEI {device.imei ?? "—"}
-                      {device.imei2 ? ` · IMEI2 ${device.imei2}` : ""}
+                      IMEI {imei ?? device?.imei ?? "—"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={info.variant}>{info.label}</Badge>
+                  <Badge variant={creditInfo.variant}>
+                    Crédito: {creditInfo.label}
+                  </Badge>
+                  {deviceInfo && (
+                    <Badge variant={deviceInfo.variant}>{deviceInfo.label}</Badge>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setSelectedDevice(device)}
+                    onClick={() => setEditingCredit(credit)}
                   >
-                    Gestionar ciclo de vida
+                    Asignar referencia / IMEI
                   </Button>
+                  {device && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedDevice(device)}
+                    >
+                      Gestionar ciclo de vida
+                    </Button>
+                  )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>
-                  Compra:{" "}
-                  <span className="font-medium">
-                    {device.purchase_date
-                      ? formatDate(device.purchase_date)
-                      : "—"}
-                  </span>
-                </span>
-                <span>
-                  Entrega:{" "}
-                  <span className="font-medium">
-                    {device.delivery_date ? formatDate(device.delivery_date) : "—"}
-                  </span>
-                </span>
-                <span>
-                  Crédito(s):{" "}
-                  <span className="font-medium">{credits.join(", ")}</span>
-                </span>
+      {creditsWithoutEquipment.map((credit) => {
+        const creditInfo = getCreditStatusInfo(credit.status);
+        return (
+          <Card key={credit.id}>
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <Smartphone className="mt-0.5 size-5 text-muted-foreground" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground">
+                      {credit.credit_number}
+                    </p>
+                    <p className="font-medium text-muted-foreground">
+                      Este crédito todavía no tiene equipo/IMEI asignado.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={creditInfo.variant}>
+                    Crédito: {creditInfo.label}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditingCredit(credit)}
+                  >
+                    Asignar referencia / IMEI
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -109,6 +171,15 @@ export function ExpedienteEquipos({ expediente }: ExpedienteEquiposProps) {
         open={!!selectedDevice}
         onOpenChange={(open) => {
           if (!open) setSelectedDevice(null);
+        }}
+      />
+
+      <CreditDeviceForm
+        credit={editingCredit}
+        deviceReferences={deviceReferences}
+        open={!!editingCredit}
+        onOpenChange={(open) => {
+          if (!open) setEditingCredit(null);
         }}
       />
     </div>

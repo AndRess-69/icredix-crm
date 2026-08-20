@@ -17,7 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreditImeiForm } from "@/components/clientes/expediente/credit-imei-form";
 import { CreditPaymentDialog } from "@/components/clientes/expediente/credit-payment-dialog";
 import { CreditDeviceForm } from "@/components/clientes/expediente/credit-device-form";
 import { CreditFormDialog } from "@/components/creditos/credit-form-dialog";
@@ -55,7 +54,6 @@ export function ExpedienteCreditos({
 }: ExpedienteCreditosProps) {
   const router = useRouter();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
-  const [imeiCredit, setImeiCredit] = React.useState<ClientExpediente["credits"][number] | null>(null);
   const [creditDialogOpen, setCreditDialogOpen] = React.useState(false);
   const [paymentCredit, setPaymentCredit] = React.useState<ExpedienteCredit | null>(null);
   const [deviceCredit, setDeviceCredit] = React.useState<ExpedienteCredit | null>(null);
@@ -105,11 +103,11 @@ export function ExpedienteCreditos({
     if (!denyingCredit) return;
     const result = await denyCreditAction(denyingCredit.id);
     if (result.success) {
-      toast.success("Crédito negado");
+      toast.success("Crédito rechazado");
       setDenyingCredit(null);
       router.refresh();
     } else {
-      toast.error(result.error ?? "Error al negar el crédito");
+      toast.error(result.error ?? "Error al rechazar el crédito");
     }
   };
 
@@ -191,7 +189,7 @@ export function ExpedienteCreditos({
                         </Button>
                         <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setDenyingCredit(credit)}>
                           <XCircle className="size-3.5" />
-                          Negar
+                          Rechazar
                         </Button>
                       </>
                     )}
@@ -204,16 +202,9 @@ export function ExpedienteCreditos({
                     <Button size="sm" variant="ghost" onClick={() => { setEditingCredit(credit); setCreditDialogOpen(true); }}>
                       <Pencil className="size-3.5" />
                     </Button>
-                    {!credit.device_reference && (
-                      <Button size="sm" variant="outline" onClick={() => setDeviceCredit(credit)}>
-                        Asociar referencia
-                      </Button>
-                    )}
-                    {!credit.imei && (
-                      <Button size="sm" variant="outline" onClick={() => setImeiCredit(credit)}>
-                        Registrar IMEI
-                      </Button>
-                    )}
+                    <Button size="sm" variant="outline" onClick={() => setDeviceCredit(credit)}>
+                      Asignar referencia / IMEI
+                    </Button>
                     {credit.pending_count > 0 && (
                       <Button size="sm" onClick={() => setPaymentCredit(credit)}>
                         Registrar pago
@@ -423,14 +414,6 @@ export function ExpedienteCreditos({
         })
       )}
 
-      <CreditImeiForm
-        credit={imeiCredit}
-        open={!!imeiCredit}
-        onOpenChange={(open) => {
-          if (!open) setImeiCredit(null);
-        }}
-      />
-
       <CreditFormDialog
         open={creditDialogOpen}
         onOpenChange={(open) => {
@@ -476,9 +459,10 @@ export function ExpedienteCreditos({
         onOpenChange={(open) => {
           if (!open) setDenyingCredit(null);
         }}
-        title="Negar crédito"
-        description={`¿Confirmas que deseas negar el crédito ${denyingCredit?.credit_number ?? ""}? El estado cambiará a "Negado".`}
-        confirmLabel="Negar"
+        title="Rechazar crédito"
+        description={`¿Confirmas que deseas rechazar el crédito ${denyingCredit?.credit_number ?? ""}? El estado cambiará a "Negado".`}
+        confirmLabel="Rechazar"
+        destructive
         onConfirm={handleDeny}
       />
 
@@ -490,6 +474,7 @@ export function ExpedienteCreditos({
         title="Marcar en proceso"
         description={`¿Confirmas que deseas volver a "En proceso" el crédito ${markingInProgressCredit?.credit_number ?? ""}?`}
         confirmLabel="Confirmar"
+        destructive={false}
         onConfirm={handleMarkInProgress}
       />
     </div>

@@ -73,12 +73,19 @@ export function ExpedienteTabs({
               <h2 className="text-lg font-semibold">
                 {`${client.first_name} ${client.last_name}`.trim()}
               </h2>
+              <span className="text-xs text-muted-foreground">Validación:</span>
               <Badge variant={validation.variant}>{validation.label}</Badge>
-              {activeCredits.map((credit) => (
-                <Badge key={credit.id} variant={getCreditStatusInfo(credit.status).variant}>
-                  {credit.credit_number}
-                </Badge>
-              ))}
+              {activeCredits.map((credit) => {
+                const creditInfo = getCreditStatusInfo(credit.status);
+                return (
+                  <span key={credit.id} className="inline-flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">Crédito:</span>
+                    <Badge variant={creditInfo.variant}>
+                      {credit.credit_number} · {creditInfo.label}
+                    </Badge>
+                  </span>
+                );
+              })}
             </div>
             <p className="text-sm text-muted-foreground">
               CC {client.cedula} · {client.city ?? "Sin ciudad"} · Registrado{" "}
@@ -124,7 +131,7 @@ export function ExpedienteTabs({
           interestRate={interestRate}
         />
       )}
-      {active === "equipos" && <ExpedienteEquipos expediente={expediente} />}
+      {active === "equipos" && <ExpedienteEquipos expediente={expediente} deviceReferences={deviceReferences} />}
       {active === "documentos" && (
         <ExpedienteDocumentos expediente={expediente} />
       )}
